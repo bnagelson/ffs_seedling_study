@@ -1,0 +1,980 @@
+---
+title: "FFS Seedling Study"
+subtitle: 'Updated: `r Sys.Date()`'
+output: 
+  officedown::rdocx_document:
+    reference_docx: FFSseedling_Figures_pubdraft1_reference.docx
+    tables:
+      conditional: 
+        first_row: false
+      caption:
+        style: Caption
+        pre: 'Table '
+        sep: " "
+    page_size:
+      orient: "portrait"
+    plots:
+      style: Normal
+      align: center
+      caption:
+        style: Caption
+        pre: 'Fig. '
+        sep: " "
+    page_margins:
+      bottom: 1
+      top: 1
+      right: 1
+      left: 1
+      gutter: 0
+editor_options:
+  chunk_output_type: console
+---
+<!-- # Note -->
+<!-- Not all figures in this document will be included in final manuscript (e.g. species-level coefficient figures). Figures 9 and 10 are examples are univariate-respone curves and can change to highlight specific results/species. -->
+
+
+
+# Figure list
+<!---BLOCK_TOC{seq_id: "fig"}--->
+
+# Table list
+<!---BLOCK_TOC{seq_id: "tab"}--->
+
+<!-- word_document: -->
+<!--     reference: FFSseedling_Figures_pubdraft1_reference.docx -->
+```{r setup, message=FALSE, warning=FALSE, results='hide', echo=FALSE}
+knitr::opts_template$set(
+  fig.large = list(fig.width = 10, fig.height = 6, dev = 'svg'),
+  fig.small = list(fig.width = 5, fig.height = 3, dev = 'png'),
+  no.message = list(message = FALSE, warning = FALSE),
+  just.code.hide = list(message=FALSE, warning=FALSE, echo=FALSE, include=FALSE),
+  hide.code.showfig = list(message=FALSE, warning=FALSE, echo=FALSE, 
+                           #cache=TRUE, 
+                           include=TRUE,
+                           results='hide',
+                           fig.width=6.3, fig.height=3.6, fig.align='center',
+                           dpi=300),
+  #full-page figure
+  hide.code.fullfig = list(message=FALSE, warning=FALSE, echo=FALSE, 
+                           #cache=TRUE, 
+                           include=TRUE,
+                           results='hide',
+                           fig.width=8.5, fig.height=11, fig.align='center',
+                           dpi=500),
+  table =list(message=FALSE, 
+              warning=FALSE,
+              #results='hide',
+              echo=FALSE, #cache=TRUE, 
+              include=TRUE)) 
+
+#load packages
+packs = c('knitr', 'tidyverse', 'calecopal', 'colourpicker', 'colorspace','scales', 'cowplot', 'mcmcplots', 'flextable','officer','crosstable', 'dotwhisker','forcats', 'showtext', 'officedown', 'glmmTMB', 'emmeans', 'captioner', 'gridExtra','grid')
+usePackage<-function(p){
+  if (!is.element(p, installed.packages()[,1])){
+    print(paste('Package:',p,'Not found, Installing Now...'))
+    install.packages(p, dep = TRUE)}
+  print(paste('Loading Package :',p))
+  require(p, character.only = TRUE)  
+}
+lapply(packs, usePackage)
+conflicted::conflicts_prefer(flextable::compose)
+conflicted::conflicts_prefer(dplyr::filter)
+
+myspecies=c('BO','DF','IC','PP','SP','WF')
+
+# #captioner
+# figure_nums <- captioner(prefix = 'Figure')
+# table_nums <- captioner(prefix = 'Table')
+
+#load data
+load("results_and_functions.rdata", verbose=T)
+load("FFSseedling_data.rdata", verbose=T)
+```
+
+\newpage
+
+```{r table1, opts.label='table', tab.cap='Microsite preferences, fire adaptations, and regeneration characteristics for six common overstory tree species of Sierra Nevada mixed-conifer forests.' }
+# adapt.table.raw = read_excel("C:/Users/bryan/Documents/UNR/FFS Seedling Study/Drafts/publication/species_adaptation_table.xlsx", 
+#                              col_names = F)[-1,]
+# colnames(adapt.table.raw) = adapt.table.raw[1,]
+
+
+adapt.table = adapt.table.raw %>%
+  select(-`Reproductive strategy`, -Bark) %>%
+  relocate(`Common name`, .before = `Scientific name`) %>%
+  tibble::add_column(break1="", .after=5) %>%
+  tibble::add_column(break2="", .after=8) %>%
+  flextable() %>%
+  add_header_row(values = c("","Microsite","", "Fire", "","Regeneration"),
+                 colwidths = c(2,3,1,2,1,3)) %>%
+  #remove break columns
+  set_header_labels(values = list(break1="", break2="")) %>%
+  align(align='left', part='all') %>%
+  align(i=1, align='center', part='header') %>%
+  italic(j=2) %>%
+  border_remove() %>%
+  #set horizontal lines for column names
+  hline(part = 'header', i=1, j=c(3:5,7:8,10:12)) %>%
+  hline(part='header',i=2) %>%
+ # hline(i=6) %>%
+  add_footer_lines("** Sourced from Burns & Honkala (1990), Bonner and Karrfalt (2008), and the Fire Effects Information System (FEIS,  https://www.feis-crs.org/feis/).") %>%
+  flextable::font(fontname = 'Times New Roman', part = 'all') %>%
+  fontsize(size=10, part='all') %>%
+  #rotate(i=2, part='header', rotation = "btlr", align = "top") %>%
+  height(i=2, height=1, part='header') %>%
+  hrule(i=2, rule='exact', part='header') %>%
+  #set column widths 
+  padding(padding.right = 1, padding.left=0, part='all') %>%
+  width(j=1, width = .63) %>%
+  width(j=2, width = .75) %>%
+  width(j=3:4, width = .58) %>%
+  width(j=c(5), width=.63) %>%
+  width(j=c(7), width=.53) %>%
+  width(j=c(8), width=.75) %>%
+  width(j=c(10), width = .68) %>%
+  width(j=c(11), width = .63) %>%
+  width(j=c(12), width = .56) %>%
+  #width(j=9, width=5/8) %>%
+  width(j=c(6,9), width=.1)  #spacer columns
+
+
+adapt.table
+```
+
+\newapge
+
+```{r totalba, opts.label='table', tab.cap = 'Mean basal area (BA) in square meters per hectare. Parentheses show standard errors for individual species BA. For Total BA, parentheses show 95% confidence intervals of the estimated marginal mean BA.'}
+
+#use only these timesteps for pairwise comparisons of total BA
+mod.timesteps = c('pre_treatment','post_1','post_7','post_14','post_18')
+#prepare data for model
+ba.mod.data = ba.all %>% 
+  pivot_wider(names_from=species, values_from = species.ba) %>%
+  dplyr::rename(Total=total.ba) %>%
+  pivot_longer(cols = Total:Other, names_to = 'species', values_to = 'ba') %>%
+  mutate(comp=factor(as.numeric(substr(PlotID, 1,4))),
+         timestep=case_when(treatment=='control'&timestep=='post_mechburn_2'~'post_18',
+                            TRUE~timestep)) %>%
+  filter(!is.na(ba), timestep%in%mod.timesteps) %>%
+  mutate(timestep=factor(timestep, levels = mod.timesteps, ordered = T),
+         treatment=factor(treatment, levels=c('control','burn','mech','mechburn')),
+         PlotID=factor(PlotID)) %>%
+  distinct(PlotID, timestep, species, .keep_all = T)
+
+# Run model
+tot.ba.all = glmmTMB(ba~treatment*timestep + (1|comp),
+        data=ba.mod.data %>% filter(species=='Total'))
+
+#emm objects
+# use $contrasts to find t-ratios and p-values
+tot.ba.emm.yr = emmeans(tot.ba.all, type='response', specs = pairwise ~ treatment|timestep)
+tot.ba.emm.trt = emmeans(tot.ba.all, type='response', specs = pairwise ~ timestep|treatment)
+tot.ba.cont = bind_rows(as.data.frame(tot.ba.emm.trt$contrasts),
+                        as.data.frame(tot.ba.emm.yr$contrasts))
+
+# compact letter displays
+tot.ba.cld = bind_rows(as.data.frame(multcomp::cld(tot.ba.emm.trt, Letters=letters)),
+                       as.data.frame(multcomp::cld(tot.ba.emm.yr)))
+## trim cld df ####
+tot.ba.cld.trim = tot.ba.cld %>%
+  distinct(treatment, timestep, .group) %>%
+  mutate(pairwise = case_when(str_detect(.group, '\\d')~'within.trt',
+                              str_detect(.group, '[:alpha:]') ~ 'within.yr',
+                              TRUE~NA_character_),
+         .group=str_trim(.group)) 
+
+tot.ba.emm.both =  as.data.frame(tot.ba.emm.yr$emmeans) %>% #only need one of the emm objects for the means and CIs
+  #filter(contrast=='.') %>%
+  mutate(treatment=factor(treatment, levels = levels(ba.mod.data$treatment)),
+         timestep=factor(timestep, levels=mod.timesteps)) %>%
+  #add in clds - this will double the number of rows (intentional)
+  #separate cld for comparisons within treatments/among years vs. within years/among treatments
+  left_join(., tot.ba.cld.trim)
+
+totba.table.df = tot.ba.emm.both %>%
+  pivot_wider(names_from = pairwise, values_from = .group) %>%
+  mutate(emmean = round(emmean, 1),
+         CI=upper.CL-emmean,
+         pairwise.label=paste0(within.trt, within.yr),
+         treatment=factor(treatment, labels=c('Control','Burn','Mech','Mech+Burn'))) %>%
+  select(treatment, timestep, emmean, CI, pairwise.label) %>%
+ rename(A=emmean, B=CI, C=pairwise.label) %>%
+  arrange(timestep) 
+spec <- build_wider_spec(totba.table.df, names_from=timestep, 
+                         values_from = c(A, B, C),
+                         names_glue = "{timestep}_{.value}") %>%
+  arrange(timestep, .value)
+
+#column indexes for confidence intervals and pairwise labels
+# meancols = c(2,5,8,11,14)
+# CIcols = c(3,6,9,12,15)
+# pwcols = c(4,7,10,13,16)
+totba.table = pivot_wider_spec(totba.table.df, spec) %>%
+  mutate(across(where(is.numeric), ~round(., 1))) %>%
+  mutate(species='Total') %>% relocate(species, .before = 'treatment') %>%
+  flextable(col_keys = c('species', "treatment", "pre_treatment_A",
+                         "post_1_A", "post_7_A", "post_14_A", "post_18_A")) %>%
+  compose(j=c("pre_treatment_A",
+                         "post_1_A", "post_7_A", "post_14_A", "post_18_A"), 
+          value=c(as_paragraph(pre_treatment_A, "±", pre_treatment_B,as_sup(pre_treatment_C)),
+                  as_paragraph(post_1_A, "±", post_1_B,as_sup(post_1_C)),
+                  as_paragraph(post_7_A, "±", post_7_B,as_sup(post_7_C)),
+                  as_paragraph(post_14_A, "±", post_14_B,as_sup(post_14_C)),
+                  as_paragraph(post_18_A, "±", post_18_B,as_sup(post_18_C)))) %>%
+  delete_part() %>%
+  add_header_row(colwidths = c(1,1,1,1,1,1,1),
+                 values = c('Species', 'Treatment','2001','2003','2009','2016','2020')) %>%
+
+  # width(j=CIcols, .4) %>%
+  # width(j=pwcols, .3) %>%
+  # width(j=meancols, .5) %>%
+  # width(j=1, .9) %>%
+  merge_v(j='species') %>%
+  align(part = 'header', align='center') %>%
+  # align(j=1, align = 'center') %>%
+  # align(part='body',j=c(4,7,10,13,16), align = 'left') %>%
+  # align(part='body',j=c(2,5,8,11,14), align = 'right') %>%
+  # padding(j=c(4,7,10,13,16), padding.left = 0) %>%
+  # padding(j=c(3,6,9,12,15), padding.right = 1, padding.left = 0) %>%
+  # padding(j=c(2,5,8,11,14), padding.right = 0) %>%
+  flextable::font(fontname='Times New Roman', part = 'all') %>%
+  add_footer_lines("Cells that share superscript letters failed Tukey tests for pairwise comparisons among years within treatments, and cells that share superscript numbers show pairwise comparisons within years and among treatments. Burn stands were treated three times: Fall 2001, 2009, and 2017. Mech stands were masticated and thinned in 2001 and again in 2017-2019. Mech+Burn stands were thinned, masticated, burned in 2001 and masticated and burned in 2018-19.")
+#totba.table
+
+##### ba table ##########
+ba.summary = ba.all %>% 
+  pivot_wider(names_from=species, values_from = species.ba) %>%
+  rename(Total=total.ba) %>%
+  pivot_longer(cols = Total:Other, names_to = 'species', values_to = 'ba') %>%
+  mutate(comp=as.numeric(substr(PlotID, 1,4))) %>%
+  filter(!is.na(ba), timestep %in% mod.timesteps, species!='Total') %>%
+  group_by(treatment, timestep, species) %>%
+  summarise(A = mean(ba, na.rm=T), 
+            B = sd(ba, na.rm = T)/sqrt(n()),
+            C = "") %>% ungroup() %>%
+  mutate(
+    # year=case_when(timestep=='pre_treatment'~2001,
+    #                     timestep=='post_1'~2003,
+    #                     timestep=='post_7'~2009,
+    #                     timestep=='post_14'~2016,
+    #                     timestep=='post_18'~2020,
+    #                     TRUE~NA_real_),
+    timestep=factor(timestep, levels = mod.timesteps),
+         treatment=factor(treatment, levels=c('control','burn','mech','mechburn'), ordered = T),
+         species=factor(species, levels=c(myspecies, 'Other'))) %>%
+  arrange(species, timestep, treatment) %>%
+  relocate(species, .before=treatment)
+
+speciesba.spec <- build_wider_spec(ba.summary, names_from=timestep, 
+                         values_from = c(A, B, C),
+                         names_glue = "{timestep}_{.value}") %>%
+  arrange(timestep, .value)
+
+ba.table = pivot_wider_spec(ba.summary, speciesba.spec) %>%
+  mutate(across(where(is.numeric), ~round(., 1))) %>%
+  mutate(treatment=factor(treatment, labels = c('Control','Burn','Mech','Mech+Burn'))) %>%
+  flextable(col_keys = c('species','treatment','pre_treatment_A',
+                         'post_1_A','post_7_A','post_14_A','post_18_A')) %>%
+  #add parentheses around SE's
+  flextable::compose(j=3:7, 
+                     value = c(as_paragraph(pre_treatment_A," ", as_bracket(pre_treatment_B)),                                                 as_paragraph(post_1_A," ",as_bracket(post_1_B)),
+                               as_paragraph(post_7_A," ",as_bracket(post_7_B)),
+                               as_paragraph(post_14_A," ",as_bracket(post_14_B)),
+                               as_paragraph(post_18_A," ",as_bracket(post_18_B)))) %>%
+  #colformat_num(j='year', big.mark = '') %>%
+  delete_part() %>% #delete header
+  add_header_row(colwidths = c(1,1,1,1,1,1,1), 
+                 values = c('Species', 'Treatment','2001','2003','2009','2016','2020')) %>%
+  align(i=1,align='center',part = 'header') %>%
+  merge_v(j='species') %>%
+  hline(i=c(4,8,12,16,20,24)) %>%
+  hline_top() %>%
+  #align(j=c(3,5,7,9,11), align = 'right') %>%
+  #align(j=c(4,6,8,10,12), align='left') %>%
+  #align(j=1:2, align = 'center') %>%
+  #width(j=1, width = .4) %>%
+  #width(j=2, width=1) %>%
+  #width(j=3:12, width = .35) %>%
+  padding(padding.left = 0, padding.top = 0, padding.bottom = 0, part='all') %>%
+  flextable::font(fontname = 'Times New Roman', part = 'all') %>%
+  fontsize(size=10, part = 'body') 
+#ba.table
+
+#### This is the actual table #######
+comb.table <- rbind(ba.table$body$dataset, totba.table$body$dataset) %>%
+  flextable(col_keys = c('species','treatment','pre_treatment_A',
+                         'post_1_A','post_7_A','post_14_A','post_18_A')) %>%
+  #species ba
+  compose(j=c("pre_treatment_A",
+                         "post_1_A", "post_7_A", "post_14_A", "post_18_A"),
+          value=c(as_paragraph(pre_treatment_A, " ", as_bracket(pre_treatment_B),as_sup(pre_treatment_C)),
+                  as_paragraph(post_1_A,        " ", as_bracket(post_1_B),as_sup(post_1_C)),
+                  as_paragraph(post_7_A,        " ", as_bracket(post_7_B),as_sup(post_7_C)),
+                  as_paragraph(post_14_A,       " ", as_bracket(post_14_B),as_sup(post_14_C)),
+                  as_paragraph(post_18_A,       " ", as_bracket(post_18_B),as_sup(post_18_C)))) %>%
+  delete_part() %>%
+  add_header_row(values = c('Species','Treatment','2001','2003','2009','2016','2020')) %>%
+  hline_top() %>%
+  merge_v(j='species') %>%
+  hline(i=c(4,8,12,16,20,24, 28)) %>%
+  align(align='center', part = 'all') %>%
+  width(j=3:7, width = .75, unit = 'in') %>%
+  #autofit() %>%
+  padding(padding=.1) %>%
+  flextable::font(fontname = 'Times New Roman', part = 'all') %>%
+  fontsize(size=10, part = 'all') %>% 
+  add_footer_lines("Cells that share superscript letters failed Tukey tests for pairwise comparisons among years within treatments, and cells that share superscript numbers show pairwise comparisons within years and among treatments. Burn stands were treated three times: Fall 2001, 2009, and 2017. Mech stands were masticated and thinned in 2001 and again in 2017-2019. Mech+Burn stands were thinned, masticated, burned in 2001 and masticated and burned in 2018-19.")
+comb.table
+
+
+```
+
+\newpage
+
+```{r light, opts.label='table', tab.cap = "Estimated marginal mean % total transmitted radiation (TTR) and 95% confidence intervals."}
+light = light %>%
+  mutate(treatment=case_when(comp%in%c(40,240,590)~'control',
+                             comp%in%c(60,340,400)~'burn',
+                             comp%in%c(190,350,490)~'mech',
+                             comp%in%c(180,380,570)~'mechburn'),
+         treatment = factor(treatment, levels=c('control','burn','mech','mechburn')),
+         year = factor(year, levels=c('2006','2016','2018','2019', '2020')),
+         comp=factor(comp)) %>%
+  filter(year!='2019',
+         !(year%in%c(2016,2018,2020)&comp==590&plot==3))
+
+light.all.mod = glmmTMB(TTR~year*treatment + (1|comp), 
+                        data=light)
+#inspect residuals
+#plot(simulateResiduals(light.all.mod)) #looks fine
+
+light.emm.trt = emmeans(light.all.mod, type = 'response', specs=pairwise~year|treatment)
+light.emm.yr = emmeans(light.all.mod, type = 'response', specs=pairwise~treatment|year)
+light.emm.con = bind_rows(as.data.frame(light.emm.trt$contrasts),
+                          as.data.frame(light.emm.yr$contrasts))
+
+#build clds
+light.cld = bind_rows(as.data.frame(multcomp::cld(light.emm.trt, Letters=letters)),
+                      as.data.frame(multcomp::cld(light.emm.yr)))
+light.cld.trim = light.cld %>%
+  distinct(year, treatment, .group) %>%
+  mutate(pairwise=case_when(str_detect(.group, '\\d')~'within.yr',
+                            str_detect(.group, '[:alpha:]')~'within.trt',
+                            TRUE~NA_character_),
+         .group=str_trim(.group))
+
+light.emm.both = as.data.frame(light.emm.trt$emmeans) %>%
+  mutate(treatment=factor(treatment, levels = levels(light$treatment)),
+         timestep=factor(year, levels=c('2006','2016','2018','2020'))) %>%
+  left_join(., light.cld.trim)
+
+# #now plot it
+# light.emm.both %>%
+#   ggplot(aes(x=year, y=emmean)) +
+#   geom_point(position = position_dodge(width = .1)) +
+#   geom_errorbar(aes(ymin=lower.CL, ymax=upper.CL), alpha=.5) +
+#   geom_text_repel(aes(label=.group, color=pairwise)) +
+#   facet_grid(rows = vars(treatment)) +
+#   ggtitle('TTR')
+
+light.table.df = light.emm.both %>%
+  pivot_wider(names_from = pairwise, values_from = .group) %>%
+  mutate(emmean = round(emmean, 1),
+         CI=upper.CL-emmean,
+         pairwise.label=paste0(within.trt, within.yr)) %>%
+  select(treatment, year, emmean, CI, pairwise.label) %>%
+ rename(A=emmean, B=CI, C=pairwise.label) %>%
+  arrange(year) 
+light.spec <- build_wider_spec(light.table.df, names_from=year, 
+                         values_from = c(A, B, C),
+                         names_glue = "x{year}_{.value}") %>%
+  arrange(year, .value)
+
+light.table = pivot_wider_spec(light.table.df, light.spec) %>%
+  mutate(treatment=factor(treatment, labels = c('Control','Burn','Mech','Mech+Burn'))) %>%
+  flextable(col_keys = c('treatment', 'x2006_A','x2016_A','x2018_A','x2020_A')) %>%
+  delete_part() %>%
+  add_header_row(colwidths = c(1,1,1,1,1),
+                 values = c('Treatment','2006','2016','2018','2020')) %>%
+  flextable::compose(j=c('x2006_A','x2016_A','x2018_A','x2020_A'),
+                     value = c(as_paragraph(x2006_A, " ", as_bracket(x2006_B), as_sup(x2006_C)),
+                               as_paragraph(x2016_A, " ", as_bracket(x2016_B), as_sup(x2016_C)),
+                               as_paragraph(x2018_A, " ", as_bracket(x2018_B), as_sup(x2018_C)),
+                               as_paragraph(x2020_A, " ", as_bracket(x2020_B), as_sup(x2020_C)))) %>%
+  # flextable::compose(j=c(4,7,10,13), value=c(as_paragraph(as_sup(x2006_C)),
+  #                                 as_paragraph(as_sup(x2016_C)),
+  #                                 as_paragraph(as_sup(x2018_C)),
+  #                                 as_paragraph(as_sup(x2020_C)))) %>%
+  width(j=1, 1) %>% #"treatment" column
+  width(j=2:5, width=1) %>%
+  #width(j=c(3,6,9,12), .4) %>% #CI cols
+  #width(j=c(4,7,10,13), .3) %>% #clds
+  align(part = 'header', align='center') %>%
+  align(j=1, align='center') %>%
+  fontsize(size=10, part='all') %>%
+  hline(i=1, part='header') %>%
+  flextable::font(fontname='Times New Roman', part='all') %>%
+  add_footer_lines("Cells that share superscript letters failed Tukey tests for pairwise comparisons among years within treatments, and cells that share superscript numbers show pairwise comparisons within years and among treatments. Burn stands were treated three times: Fall 2001, 2009, and 2017. Mech stands were masticated and thinned in 2001 and again in 2017-2019. Mech+Burn stands were thinned, masticated, burned in 2001 and masticated and burned in 2018-19.")
+light.table
+
+```
+
+\newpage
+
+
+```{r seedlingEMMsmod, opts.label='hide.code.showfig'}
+#timesteps to include in model
+abund.times = c('pre_treatment','post_1','post_4', 'post_7','post_14','post_18')
+
+#prepare seedling data
+abund.mod.data = abundance %>%
+  filter(timestep%in%abund.times) %>%
+  mutate(comp=factor(comp))
+
+abund.all.mod = lapply(myspecies, FUN = function(k) {
+  glmmTMB(seedlings.count ~ treatment*timestep + (1|comp),
+          family=nbinom2(), 
+          offset = log(plotsize),
+          data = abund.mod.data %>% filter(species==k))
+}
+)
+names(abund.all.mod) = myspecies
+```
+
+```{r seedlingEMMsfigsetup, opts.label='hide.code.showfig'}
+#examine residuals for each model
+# lapply(abund.all.mod, function(x){
+#   #plot(simulateResiduals(x))
+#   #testOutliers(simulateResiduals(x), type = 'bootstrap')
+#  testUniformity(simulateResiduals(x))
+# }) #everything looks fine
+
+#build lists of emm objects
+abund.emm.yr = lapply(abund.all.mod, function(x){
+    emmeans(x, type='response', specs = pairwise ~ treatment|timestep, offset = 0)
+})
+abund.emm.trt = lapply(abund.all.mod, function(x){
+  emmeans(x, type='response', specs = pairwise ~ timestep|treatment, offset=0)
+})
+names(abund.emm.yr) = myspecies
+names(abund.emm.trt) = myspecies
+
+# contrasts (t-ratios and p-values)
+abund.emm.con = bind_rows(lapply(1:6, function(x){
+  bind_rows(as.data.frame(abund.emm.trt[[x]]$contrast),
+            as.data.frame(abund.emm.yr[[x]]$contrast)) %>%
+    mutate(species=myspecies[x])
+}))
+
+#get list of clds
+abund.cld.trt = bind_rows(lapply(seq_along(abund.emm.trt), function(x){
+  as.data.frame(multcomp::cld(abund.emm.trt[[x]], Letters=letters)) %>%
+    mutate(species=myspecies[x])
+}))
+abund.cld.yr = bind_rows(lapply(seq_along(abund.emm.yr), function(x){
+  as.data.frame(multcomp::cld(abund.emm.yr[[x]])) %>%
+    mutate(species=myspecies[x])
+}))
+
+abund.cld.trim = bind_rows(abund.cld.trt, abund.cld.yr) %>%
+  distinct(species, treatment, timestep, .group) %>%
+  mutate(pairwise = case_when(str_detect(.group, '\\d')~'within.yr',
+                              str_detect(.group, '[:alpha:]') ~ 'within.trt',
+                              TRUE~NA_character_),
+         .group=str_trim(.group)) 
+
+abund.emm.both = bind_rows(lapply(seq_along(abund.emm.yr), function(x) {
+  as.data.frame(abund.emm.yr[[x]]$emmeans) %>% 
+    mutate(species=myspecies[x])
+})) %>%
+  mutate(treatment=factor(treatment, 
+                          levels = levels(abund.mod.data$treatment)),
+         timestep=factor(timestep, levels=abund.times)) %>%
+  left_join(., abund.cld.trim) %>%
+  rename(lower.CL = asymp.LCL,
+         upper.CL = asymp.UCL)
+
+# build plot
+#separate dataframe to display vertical lines for treatment implementation
+treatment.hline.df = tibble(treatment=factor(c('Control', 'Burn','Burn','Burn','Mech','Mech','Mech+Burn','Mech+Burn'),
+                                             levels=c('Control', 'Burn','Mech','Mech+Burn')),
+                            year.fac = as.character(c("", 2002,2009.5,2017,2002,2017,2002,2018)),
+                            species='event') %>%
+  filter(treatment!='Control')
+
+titles = c('Black oak','Douglas-fir','Incense-cedar','Ponderosa pine','Sugar pine','White fir')
+
+treatcolors = cal_palettes$superbloom3[c(6,1,5,2)]
+
+abund.plot = function(x) {abund.emm.both %>%
+    mutate(across(c(lower.CL, upper.CL), ~case_when(species=='PP'&
+                                                      timestep=='post_7'&
+                                                      treatment=='control'~0,
+                            species=='SP'&
+                              timestep=='post_4'&
+                              treatment=='control'~0,
+                            TRUE~.))) %>%
+  mutate(response=case_when(species=='PP'&timestep=='post_7'&treatment=='control'~0,
+                            species=='SP'&timestep=='post_4'&treatment=='control'~0,
+                            TRUE~response),
+         treatment=factor(treatment, labels = c('Control','Burn','Mech','Mech+Burn')),
+         #species = factor(species, levels = myspecies, labels=c('Black oak','Douglas-fir','Incense-cedar','Ponderosa pine','Sugar pine','White fir')),
+         timestep=factor(timestep, labels=c('2001','2003','2006','2009','2016','2020')),
+         year.fac = as.character(timestep),
+         ) %>%
+    filter(species==x) %>%
+  #mutate(year.fac = as.numeric(year.fac)) %>%
+  #mutate(across(c(response, upper.CL, lower.CL), ~exp(.))) %>%
+  #bind_rows(., treatment.hline.df) %>%
+    ggplot(aes(x=timestep, y=response, color=treatment)) +
+    geom_point(position = position_dodge(width = .5),
+               size=.8) +
+    geom_errorbar(aes(ymin=lower.CL, 
+                      ymax=upper.CL), 
+                  position = position_dodge(width = .5),
+                  alpha=.5,
+                  width = .5) +
+    scale_color_manual(values = treatcolors) +
+    #scale_y_continuous(trans = 'log', breaks=c(100,1000,25000)) +
+    #scale_color_manual(values = c("#FFC20A", "#0C7BDC"), labels = c('Within-treatment', 'Within-year')) +
+    #geom_text_repel(aes(label=.group, color=pairwise)) +
+    # facet_grid(rows = vars(treatment),
+    #            # rows = vars(species),
+    #            # scale='free_y'
+    #            ) +
+    labs(y=bquote('seedlings '~ha^-1),
+         x= 'Year') +
+    ggtitle(titles[which(myspecies==x)]) +
+    theme_bw() +
+    theme(panel.grid = element_blank(),
+          strip.background = element_blank(),
+          legend.title = element_blank(),
+          legend.direction = 'horizontal',
+          legend.position = 'bottom',
+          strip.text = element_text(face = 'bold'),
+          axis.text = element_text(colour = 'black')) 
+}
+```
+
+Figure 1
+```{r seedlingEMMfig, opts.label='hide.code.fullfig', fig.cap = "Estimated marginal means and 95% confidence intervals of seedling density for the four FFS treatment groups. No seedlings were detected for two different years in the Controls: ponderosa pine in 2009 sugar pine in 2004. Error bars have been removed at these points. Vertical bars between years broadly indicate treatment timing relative to seedling measurements. Burn stands were treated three times: Fall 2001, 2009, and 2017. Mech stands were masticated and thinned in 2001 and again in 2017-2019. Mech+Burn stands were thinned, masticated, burned in 2001 and masticated and burned in 2018-19. Y-axes are square-root transformed."}
+# plot_grid(
+#   plot_grid(abund.plot('BO'),abund.plot('DF'), nrow = 1),
+#   plot_grid(abund.plot('IC'),abund.plot('PP'), nrow = 1),
+#   plot_grid(abund.plot('SP'),abund.plot('SP'), nrow = 1),
+#   nrow = 3
+# )
+
+ylimits = c(0, 140000)
+names(myspecies) = c('Black oak', 'Douglas-fir','Incense-cedar','Ponderosa pine','Sugar pine','White fir')
+
+abund.list = lapply(seq_along(myspecies), function(x){
+  abund.plot(myspecies[x]) + 
+    ggtitle(paste0(letters[x], ") ", names(myspecies)[x])) + 
+    scale_y_continuous(trans = 'sqrt', 
+                       breaks = c(500, 10000, 50000), 
+                       limits=ylimits) + 
+    theme(legend.position = 'none', 
+          axis.title = element_blank(), 
+          plot.title = element_text(hjust = .02,
+                                    size=9,
+                                    vjust = 5,
+                                    margin = ggplot2::margin(t=7,b=-20),
+                                    face = 'bold'),
+          panel.background=element_rect(fill='transparent', color=NA),
+          plot.background = element_rect(fill='transparent', color=NA))
+  })
+abund.list[[1]]
+#yaxis = gridtext::richtext_grob(expression(seedlings ha^(-1)), rot=90)
+yaxis = textGrob(expression("seedlings ha"^-1), rot=90)
+
+figure1 = grid.arrange(arrangeGrob(grobs = abund.list, ncol = 2), 
+                            textGrob('Year', vjust=-.25, gp=gpar(fontsize=10,
+                                                     fontface='bold')),
+                            get_legend(abund.plot('BO')+
+                                         theme(legend.margin = ggplot2::margin(t=0, b = 0, 
+                                                                               unit = 'cm'), 
+                                               legend.text = element_text(size=10))),
+                            nrow=3, 
+                            heights = c(11,.25,.6),
+                            left = yaxis)
+
+
+```
+
+\newpage
+
+```{r whiskerplot, opts.label='just.code.hide'}
+names(myspecies) = c('Black Oak','Douglas-fir','Incense cedar',
+                     'Ponderosa pine','Sugar pine','White fir')
+
+#using combined dataframe
+plotting.df = bind_rows(dens.mod.results, occ.mod.results) %>%
+  mutate(term=case_when(term=='trtnum'~'Treatment applications',
+                        term=='species.ba'~'Conspecific BA',
+                        term=='total.ba'~'Total BA',
+                        #term=='cwd.3'~'CWD',
+                        term=='ppt.annual.june.may.3'~'Precip',
+                        term=='Fire Only'~'Burn',
+                        term=='Mech Only'~ 'Mech',
+                        term=='Mech+Fire'~'Mech+Burn',
+                        term=='Time[Control]'~'Time \u00D7 Control', #\u00D7 is the code for the multiplication symbol "x"
+                        term=='Time since Fire Only'~'Time \u00D7 Burn',
+                        term=='Time since Mech Only'~ 'Time \u00D7 Mech',
+                        term=='Time since Mech+Fire'~ 'Time \u00D7 Mech+Burn',
+                        term=='cool.ppt' ~ 'Cool season PPT',
+                        term=='warm.ppt' ~ 'Growing season PPT',
+                        term=='warm.cwd' ~ 'Growing season CWD',
+                        TRUE~term),
+         bigmod=case_when(model=='Density'~'Density',
+                          model!='Density'~'Occupancy'),
+         model=str_to_title(model)) %>%
+  filter(term!='Intercept',
+         coeff.type=='scaled')
+
+```
+
+Figure 2
+```{r whiskerfacet, opts.label='hide.code.fullfig' ,fig.cap = "Modeled coefficients and 90% credible intervals for species-specific seedling density and occupancy models. Faded bars indicate that the 90% credible interval included zero. Abbreviations: BA = basal area, PPT = precipitation, Cool season = Nov.-March, Warm season = April-Oct., CWD = climatic water deficit"}
+
+#create facet labels
+whiskerfacetlabels = c(BO = 'a) Black oak',
+                          DF = 'b) Douglas-fir',
+                          IC = 'c) Incense-cedar',
+                          PP = 'd) Ponderosa pine',
+                          SP = 'e) Sugar pine',
+                          WF = 'f) White fir')
+dynamic.colors <- cal_palettes$sierra1[c(3,1,6)]#order is persistence, col, dens
+#changin the colonization color to stand out better
+dynamic.colors[2] <- "#ECE24F"
+figure2 <- plotting.df %>%
+  dwplot(whisker_args = list(size=1, aes(alpha=overlap0)),
+           dot_args = list(size=1.5, aes(alpha=overlap0))) +
+    scale_alpha_discrete(range=c(1,.4), guide='none')+
+    geom_vline(xintercept = 0, linetype=2) + #add hashed line at 0
+    scale_color_manual(values = dynamic.colors) + 
+    scale_x_continuous(limits = c(-2.6, 3.2)) + #set x limits for all panels
+    theme_bw() +
+  # facet_grid(cols = vars(bigmod), scales = 'free') +
+  # ggtitle(names(myspecies)[which(myspecies==x)]) +
+  facet_wrap(~species, nrow = 3, labeller = as_labeller(whiskerfacetlabels)) + #add facets and labels
+  theme(legend.position = 'bottom', 
+        legend.margin = ggplot2::margin(t=-.9, unit = 'cm'),
+        legend.title = element_blank(),
+        legend.text = element_text(size=10),
+        #plot.margin = unit(c(.1,0.1,-.6,-.5),'cm'),
+        plot.title = element_text(size=12, margin = ggplot2::margin(.05, 0, .05, 0, "cm")) ,
+        strip.text.x = element_text(size=10, margin = ggplot2::margin(.05, 0, .05, 0, "cm"), face = 'bold'), 
+        axis.text.x = element_text(size=9,vjust = 3),
+        axis.text.y=element_text(size=10),
+        #plot.background = element_rect(color='black'),
+        strip.text = element_text(face = 'bold', hjust = 0, size=10),
+        strip.background = element_blank(),
+        axis.text = element_text(color='black'),
+        panel.grid.minor.x = element_blank())
+figure2
+
+```
+
+\newpage 
+
+Figure 3
+```{r timesince, opts.label="hide.code.fullfig", fig.cap="Probability of colonization and persistence as a function of years since treatment application when all other covariates are set to their means. Thin lines are random draws from the posterior distribution, thick lines show the posterior median, and thick hashed lines indicate that the 90% credible interval includes zero. For the Control, the 'treatment' is considered to have taken place in 2001 when the study was established."}
+curveplotfun = function(my.species = c('PP'),
+                        var='timesince',
+                        listdf=occ.model.data,
+                        #dfdata=datadf,
+                        alldf = occ.curves.y,
+                        med.df=occ.curves.median,
+                        xlab="var"){
+  
+  #development - turn off before running
+  # my.species = myspecies
+  # var='warm.cwd'
+  # listdf=occ.model.data
+  # #dfdata=datadf
+  # alldf = occ.curves.y
+  # med.df=occ.curves.median
+  # xlab="var"
+  #end development
+  
+  ################ start function ################
+  #establish set colors for treatments
+  treatcolors = cal_palettes$superbloom3[c(6,1,5,2)]
+  
+  #establish set colors for species 
+  spp.colors = viridis_pal(option = 'H')(length(my.species))
+  spp.colors[3] <- "#2FA159"
+  spp.colors[4] <- "#FFD208"
+  
+  
+  #change figure labeling based on variable
+  if(var!='timesince') {
+    trt.filter <- 'trt1'
+    trt.labels <- my.species
+    spp.filter <- my.species
+    mycolors <- spp.colors[which(myspecies%in%my.species)]
+    aes.color.switch <- 'species'} else {
+      #var==timesince  
+      trt.filter <- c('trt1','trt2','trt3','trt4')
+      trt.labels <- c('Control','Burn','Mech','Mech+Burn')
+      spp.filter <- my.species
+      mycolors <- treatcolors
+      aes.color.switch <- 'trt'
+    }
+  
+  #filter input data
+  datadf = bind_rows(lapply(spp.filter, function(x) listdf[[x]] %>% mutate(species=x)))
+  #var.vals=dfdata[,var]
+  plot.df.y=alldf %>% 
+    filter(species%in%spp.filter, 
+           myvar==var, 
+           trt%in%trt.filter) %>%
+    dplyr::rename(color.col = aes.color.switch) %>%
+    mutate(model=str_to_title(model))
+  
+  plot.df.med=med.df %>% 
+    mutate(term=case_when(myvar=='trtnum'~'Treatment applications',
+                        myvar=='species.ba'~'Conspecific BA',
+                        myvar=='total.ba'~'Total BA',
+                        myvar=='cool.ppt' ~ 'Cool season PPT',
+                        myvar=='warm.ppt' ~ 'Growing season PPT',
+                        myvar=='warm.cwd' ~ 'Growing season CWD',
+                        myvar=='timesince'&treatment=='Control'~'Time \u00D7 Control',
+                        myvar=='timesince'&treatment=='Fire Only'~'Time \u00D7 Burn',
+                        myvar=='timesince'&treatment=='Mech Only'~'Time \u00D7 Mech',
+                        myvar=='timesince'&treatment=='Mech+Fire'~'Time \u00D7 Mech+Burn',
+                        TRUE~myvar),
+           model=str_to_title(model)) %>%
+    left_join(., select(plotting.df, term, overlap0, model, species),
+              by=c('model','species','term')) %>%
+    filter(species%in%spp.filter,
+           myvar==var, 
+           trt%in%trt.filter) %>%
+    dplyr::rename(color.col = aes.color.switch) 
+  #meddf$trt = factor(meddf$trt, labels=c('Control','Fire.Only','Mechanical.Only','Mechanical.Fire'))
+  
+  #now plot
+  ggplot(data=datadf, aes_string(x=var,y='occupancy'))+
+   
+    #individual mcmc samples
+    geom_line(data=plot.df.y, aes(x=x.values, 
+                                  y=y,
+                                  group=interaction(n.draw,color.col),
+                                  color=color.col), 
+              alpha=.2) +
+    #medians
+    geom_line(data=plot.df.med, lwd =2, aes(x=x.values, 
+                                            y=y.median, 
+                                            group=color.col, 
+                                            color=color.col,
+                                            linetype = overlap0)) +
+    scale_linetype(labels=c('90% CI does not include 0', '90% CI includes 0'),
+                   guide=guide_legend(keywidth=2)) +
+    scale_color_manual(values = mycolors, labels=trt.labels) +
+    scale_y_continuous(limits = c(0,1), breaks = c(0, .5, 1)) +
+    theme_cowplot()+
+    facet_grid(cols=vars(model)) +
+    #ggtitle(paste(my.species, var, sep = " ")) +
+    #geom_hline(yintercept = .5, linetype=2) +
+    guides(color=guide_legend(ncol=2)) +
+    theme(legend.position = 'bottom',
+          legend.direction = 'vertical',
+          legend.margin = margin(t=-.5, unit = 'cm'),
+          legend.title = element_blank(),
+          legend.text = element_text(size=10),
+          plot.title = element_text(size=12, margin =margin(.05, 0, .05, 0, "cm")) ,
+          strip.text.x = element_text(size=10, margin = margin(.05, 0, .05, 0, "cm")), 
+          axis.text.x = element_text(size=9,vjust = 3),
+          axis.text.y=element_text(size=10),
+          axis.title = element_blank(),#element_text(size=12),
+          strip.background = element_blank()) +
+    labs(y='probability', x=xlab)
+}
+
+## Plot it #################
+curveplot.list <- lapply(seq_along(myspecies), function(x){
+  curveplotfun(my.species = myspecies[x], var = 'timesince') +
+    ggtitle(paste0(letters[x], ") ",names(myspecies)[x])) +
+    theme(legend.position = 'none',
+          plot.title = element_text(size=10)
+          )
+})
+#curveplot.list[[1]]
+
+figure3 = grid.arrange(arrangeGrob(grobs = curveplot.list, ncol = 2), 
+                            textGrob('Years since treatment', 
+                                     vjust=-.25, 
+                                     gp=gpar(fontsize=10,
+                                             fontface='bold')),
+                            get_legend(curveplotfun('BO')+
+                                         
+                                         theme(legend.margin = ggplot2::margin(t=-5), 
+                                               legend.text = element_text(size=10),
+                                               legend.justification = c(.5,0))),
+                            nrow=3, 
+                            heights = c(11,.25,.7),
+                            left = textGrob("Occupancy probability", rot=90))
+
+
+```
+
+\newpage
+
+Figure 4
+```{r curve_ppt, opts.label='hide.code.fullfig', fig.cap = "Probability of colonization and persistence as a function of a) cool season (Nov.-March) precipitation, b) growing season (April-Oct.) precipitation, and c) growing season climatic water deficit (CWD). Thin lines are random draws from the posterior distribution, thick lines show the posterior median, and thick hashed lines indicate that the 90% credible interval includes zero. BO = Black oak, DF = Douglas-fir, IC = Incense cedar, PP = Ponderosa pine, SP = Sugar pine, WF = White fir."}
+
+clim.vars = c('cool.ppt','warm.ppt','warm.cwd')
+names(clim.vars) = c('Cool season precipitation', 
+                     'Growing season precipitation',
+                     'Growing season CWD')
+clim.curve.list = lapply(seq_along(clim.vars), function(x){
+  curveplotfun(my.species = myspecies, var = clim.vars[x]) +
+    ggtitle(paste0(letters[x], ") ", names(clim.vars)[x])) +
+    theme(legend.position = 'none',
+          plot.title=element_text(size=10)
+          
+                                    )
+  
+})
+
+figure4 = grid.arrange(arrangeGrob(grobs = clim.curve.list, ncol = 1), 
+                            textGrob('mm moisture', 
+                                     vjust=-.25, 
+                                     gp=gpar(fontsize=10,
+                                             fontface='bold')),
+                            get_legend(curveplotfun(myspecies, var = 'warm.cwd')+
+                                         guides(color=guide_legend(ncol=3)) +
+                                         theme(legend.margin = ggplot2::margin(t=-5), 
+                                               legend.text = element_text(size=10),
+                                               legend.justification = c(.5,0))),
+                            nrow=3, 
+                            heights = c(11,.25,1),
+                            left = textGrob("Occupancy probability", rot=90))
+
+```
+
+\newpage 
+
+# Appendix A
+## Figure A1: Climate
+
+```{r climate, opts.label='hide.code.showfig', fig.cap='Climate variables over the course of the study. Cool season = November-March, Warm season = April-October. For visualization purposes, annual cool season precipitation is plotted on the later year. E.g. Cool season precipitation for 11/2019-3/2020 is plotted here as 2020. Horizontal lines show means over the length of the study.', fig.cap.style='Caption', fig.height=5.8}
+
+clim.df = climate %>%
+  filter(!(variable=='cwd'&season=='cool')) %>%
+  mutate(sample.year = case_when(season=='warm'~sample.year-1,
+                                 TRUE~sample.year))
+summary.stats = clim.df %>%
+  filter(sample.year%in%2001:2020) %>%
+  group_by(season, variable) %>%
+  summarise(mean=mean(value),
+            se=sd(value)/sqrt(n()),
+            min=min(value),
+            max=max(value))
+ 
+global.avgs = climate %>%
+  filter(!(variable=='cwd'&season=='cool'), sample.year%in%2001:2020) %>%
+  mutate(sample.year = case_when(season=='warm'~sample.year-1,
+                                 TRUE~sample.year)) %>%
+  group_by(sample.year, variable) %>%
+  summarise(value=sum(value))
+mean.cool.ppt = mean(clim.df$value[which(clim.df$sample.year%in%2001:2020 & 
+                                     clim.df$season=='cool')])
+mean.warm.ppt = mean(clim.df$value[which(clim.df$sample.year%in%2001:2020 & 
+                                     clim.df$season=='warm' &
+                                       clim.df$variable=='ppt')])
+
+
+mean.annual.ppt = mean(global.avgs$value[which(global.avgs$variable=='ppt')])
+
+clim.labs = c('Climatic Water Deficit','Precipitation')
+names(clim.labs) = c('cwd','ppt')
+
+clim.df %>% 
+  filter(sample.year%in%1998:2020) %>%
+ggplot(aes(x=sample.year,y=value, group=interaction(season, variable))) +
+  geom_line(aes(linetype=factor(season))) +
+  scale_linetype_manual(values = c(1,2,3), name='Season') +
+  scale_color_discrete(guide='none') +
+  stat_smooth(method="lm", formula=y~1, se=FALSE, aes(linetype=factor(season)), 
+              show.legend = FALSE)+
+  facet_wrap(~variable, nrow = 2, scales = 'free', labeller = labeller(variable=clim.labs)) +
+  xlab('Year') +
+ylab('Millimeters of moisture') +
+  theme_bw() +
+  theme(text = element_text(family = 'Times New Roman'),
+        legend.position = 'bottom',
+        legend.direction = 'horizontal',
+        #legend.box.background = element_rect(colour = 'black', size = 1),
+        legend.margin = margin(-10,0,-2,0),
+        strip.background = element_blank(),
+        strip.text = element_text(face='bold', size=12),
+        panel.spacing.y = unit(0, 'lines'))
+```
+
+\newpage
+
+
+```{r speciesba, opts.label='table', tab.cap = 'Marginal mean (standard error) species-level basal area per hectare.'}
+
+
+# ba.spp.mod.df = ba.all %>% 
+#   pivot_wider(names_from=species, values_from = species.ba) %>%
+#   rename(Total=total.ba) %>%
+#   pivot_longer(cols = Total:Other, names_to = 'species', values_to = 'ba') %>%
+#   mutate(comp=as.numeric(substr(PlotID, 1,4))) %>%
+#   filter(!is.na(ba), timestep %in% mod.timesteps, species!='Total', species !='Other') %>%
+#   mutate(across(c(species, timestep, comp, treatment), ~factor(.)))
+# 
+# ba.spp.mod = glmmTMB(ba~species*treatment*timestep + (1|comp),
+#                      data = ba.spp.mod.df)
+# 
+# spp.emm = emmeans(ba.spp.mod, type='response', 
+#                   specs = pairwise ~ treatment|species*timestep)
+# spp.con = as.data.frame(spp.emm$contrasts)
+#trt.emm
+#yr.emm 
+
+```
+\newpage 
+
+## Table A1: List of covariate means and standard deviations
+
+```{r covariates, opts.label='table', tab.cap='Covariate means and standard deviations used in density and occupancy models.'}
+load("dens.mod.output.rdata")
+#get species BA
+model.datadf = bind_rows(lapply(myspecies, function(x){
+  model.data[[x]] %>% mutate(species=x)
+})) 
+
+species.ba.df = model.datadf %>% 
+  group_by(species) %>% 
+  summarise(mean=round(mean(species.ba),1),
+         sd=round(sd(species.ba),1)) %>% ungroup() %>%
+        mutate(variable=paste(species, 'BA')) %>%
+  select(-species) %>%
+  mutate(units='m2ha-1')
+cov.df = model.datadf %>%
+  select(species,trtnum, total.ba, cool.ppt, warm.ppt, warm.cwd, timesince) %>%
+  pivot_longer(cols = trtnum:timesince, names_to = 'variable', values_to = 'value') %>%
+  filter(species=='BO') %>% #just take one species because the means area ll the same
+  #group_by(species, variable) %>%
+  group_by(variable) %>%
+  summarise(mean=round(mean(value),1),
+            sd=round(sd(value),1)) %>% ungroup() %>%
+  mutate(variable=factor(variable, 
+                         levels = c('trtnum','timesince','cool.ppt',
+                                    'warm.ppt','warm.cwd','total.ba'),
+                         labels = c('Treatment applications','Time since treatment',
+                                    'Cool season PPT', 'Warm season PPT', 
+                                    'Warm season CWD', 'Total BA'), 
+                         ordered = T)) %>%
+  arrange(variable) %>%
+  mutate(units = c('n treatments','years','mm','mm','mm','m2ha-1'))
+
+bind_rows(cov.df, species.ba.df) %>%
+  flextable() %>%
+  flextable::font(fontname='Times New Roman', part = 'all') %>%
+  width(j=1, width = 2)
+```
